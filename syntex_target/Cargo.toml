@@ -1,0 +1,17 @@
+[package]
+authors = ["The Rust Project Developers"]
+name = "syntex_target"
+version = "0.0.0"
+
+[lib]
+name = "syntex_target"
+path = "src/lib.rs"
+
+[dependencies]
+bitflags = "1.0"
+log = "0.4"
+rustc-serialize = "0.3"
+syntex_cratesio_shim = { path = "../syntex_cratesio_shim" }
+
+[features]
+jemalloc = []

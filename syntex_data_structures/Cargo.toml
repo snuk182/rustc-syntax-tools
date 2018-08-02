@@ -1,0 +1,24 @@
+[package]
+authors = ["The Rust Project Developers"]
+name = "syntex_data_structures"
+version = "0.60.0"
+
+[lib]
+name = "syntex_data_structures"
+path = "src/lib.rs"
+
+[dependencies]
+ena = "0.9.3"
+log = "0.4"
+syntex_cratesio_shim = { path = "../syntex_cratesio_shim" }
+rustc-serialize = "0.3"
+cfg-if = "0.1.2"
+stable_deref_trait = "1.0.0"
+parking_lot_core = "0.2.8"
+rustc-rayon = "0.1.1"
+rustc-rayon-core = "0.1.1"
+rustc-hash = "1.0.1"
+
+[dependencies.parking_lot]
+version = "0.5"
+features = ["nightly"]

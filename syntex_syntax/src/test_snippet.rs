@@ -13,10 +13,12 @@ use errors::Handler;
 use errors::emitter::EmitterWriter;
 use std::io;
 use std::io::prelude::*;
-use std::rc::Rc;
+use syntex_data_structures::sync::Lrc;
 use std::str;
 use std::sync::{Arc, Mutex};
-use syntax_pos::{BytePos, NO_EXPANSION, Span, MultiSpan};
+use std::path::Path;
+use syntex_pos::{BytePos, NO_EXPANSION, Span, MultiSpan};
+use with_globals;
 
 /// Identify a position in the text by the Nth occurrence of a string.
 struct Position {
@@ -45,46 +47,46 @@ impl<T: Write> Write for Shared<T> {
 }
 
 fn test_harness(file_text: &str, span_labels: Vec<SpanLabel>, expected_output: &str) {
-    let output = Arc::new(Mutex::new(Vec::new()));
+    with_globals(|| {
+        let output = Arc::new(Mutex::new(Vec::new()));
 
-    let code_map = Rc::new(CodeMap::new(FilePathMapping::empty()));
-    code_map.new_filemap_and_lines("test.rs", &file_text);
+        let code_map = Lrc::new(CodeMap::new(FilePathMapping::empty()));
+        code_map.new_filemap(Path::new("test.rs").to_owned().into(), file_text.to_owned());
 
-    let primary_span = make_span(&file_text, &span_labels[0].start, &span_labels[0].end);
-    let mut msp = MultiSpan::from_span(primary_span);
-    for span_label in span_labels {
-        let span = make_span(&file_text, &span_label.start, &span_label.end);
-        msp.push_span_label(span, span_label.label.to_string());
-        println!("span: {:?} label: {:?}", span, span_label.label);
-        println!("text: {:?}", code_map.span_to_snippet(span));
-    }
+        let primary_span = make_span(&file_text, &span_labels[0].start, &span_labels[0].end);
+        let mut msp = MultiSpan::from_span(primary_span);
+        for span_label in span_labels {
+            let span = make_span(&file_text, &span_label.start, &span_label.end);
+            msp.push_span_label(span, span_label.label.to_string());
+            println!("span: {:?} label: {:?}", span, span_label.label);
+            println!("text: {:?}", code_map.span_to_snippet(span));
+        }
 
-    let emitter = EmitterWriter::new(Box::new(Shared { data: output.clone() }),
-                                     Some(code_map.clone()));
-    let handler = Handler::with_emitter(true, false, Box::new(emitter));
-    handler.span_err(msp, "foo");
+        let emitter = EmitterWriter::new(Box::new(Shared { data: output.clone() }),
+                                        Some(code_map.clone()),
+                                        false,
+                                        false);
+        let handler = Handler::with_emitter(true, false, Box::new(emitter));
+        handler.span_err(msp, "foo");
 
-    assert!(expected_output.chars().next() == Some('\n'),
-            "expected output should begin with newline");
-    let expected_output = &expected_output[1..];
+        assert!(expected_output.chars().next() == Some('\n'),
+                "expected output should begin with newline");
+        let expected_output = &expected_output[1..];
 
-    let bytes = output.lock().unwrap();
-    let actual_output = str::from_utf8(&bytes).unwrap();
-    println!("expected output:\n------\n{}------", expected_output);
-    println!("actual output:\n------\n{}------", actual_output);
+        let bytes = output.lock().unwrap();
+        let actual_output = str::from_utf8(&bytes).unwrap();
+        println!("expected output:\n------\n{}------", expected_output);
+        println!("actual output:\n------\n{}------", actual_output);
 
-    assert!(expected_output == actual_output)
+        assert!(expected_output == actual_output)
+    })
 }
 
 fn make_span(file_text: &str, start: &Position, end: &Position) -> Span {
     let start = make_pos(file_text, start);
     let end = make_pos(file_text, end) + end.string.len(); // just after matching thing ends
     assert!(start <= end);
-    Span {
-        lo: BytePos(start as u32),
-        hi: BytePos(end as u32),
-        ctxt: NO_EXPANSION,
-    }
+    Span::new(BytePos(start as u32), BytePos(end as u32), NO_EXPANSION)
 }
 
 fn make_pos(file_text: &str, pos: &Position) -> usize {
@@ -731,6 +733,49 @@ error: foo
   |   ^^^^-------^^
   |       |
   |       `b` is a good letter
+
+"#);
+}
+
+#[test]
+fn multiple_labels_secondary_without_message_3() {
+    test_harness(r#"
+fn foo() {
+  a  bc  d
+}
+"#,
+    vec![
+        SpanLabel {
+            start: Position {
+                string: "a",
+                count: 1,
+            },
+            end: Position {
+                string: "b",
+                count: 1,
+            },
+            label: "`a` is a good letter",
+        },
+        SpanLabel {
+            start: Position {
+                string: "c",
+                count: 1,
+            },
+            end: Position {
+                string: "d",
+                count: 1,
+            },
+            label: "",
+        },
+    ],
+    r#"
+error: foo
+ --> test.rs:3:3
+  |
+3 |   a  bc  d
+  |   ^^^^----
+  |   |
+  |   `a` is a good letter
 
 "#);
 }

@@ -8,12 +8,12 @@ This repository contains a backport of the following unstable crates from the
 Rust compiler.
 
 - [`libsyntax`] => [`syntex_syntax`]
-- [`libsyntax_pos`] => [`syntex_pos`]
+- [`libsyntex_pos`] => [`syntex_pos`]
 - [`librustc_errors`] => [`syntex_errors`]
 
 [`libsyntax`]: https://github.com/rust-lang/rust/tree/master/src/libsyntax
 [`syntex_syntax`]: https://docs.rs/syntex_syntax
-[`libsyntax_pos`]: https://github.com/rust-lang/rust/tree/master/src/libsyntax_pos
+[`libsyntex_pos`]: https://github.com/rust-lang/rust/tree/master/src/libsyntex_pos
 [`syntex_pos`]: https://docs.rs/syntex_pos
 [`librustc_errors`]: https://github.com/rust-lang/rust/tree/master/src/librustc_errors
 [`syntex_errors`]: https://docs.rs/syntex_errors

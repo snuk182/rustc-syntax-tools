@@ -9,15 +9,15 @@
 // except according to those terms.
 
 use std::fmt;
-use std::ops::Deref;
-use std::rc::Rc;
+use std::ops::{Deref, Range};
+use syntex_data_structures::sync::Lrc;
 
-use rustc_data_structures::stable_hasher::{StableHasher, StableHasherResult,
+use syntex_data_structures::stable_hasher::{StableHasher, StableHasherResult,
                                            HashStable};
 
 #[derive(Clone)]
 pub struct RcSlice<T> {
-    data: Rc<Box<[T]>>,
+    data: Lrc<Box<[T]>>,
     offset: u32,
     len: u32,
 }
@@ -27,7 +27,15 @@ impl<T> RcSlice<T> {
         RcSlice {
             offset: 0,
             len: vec.len() as u32,
-            data: Rc::new(vec.into_boxed_slice()),
+            data: Lrc::new(vec.into_boxed_slice()),
+        }
+    }
+
+    pub fn sub_slice(&self, range: Range<usize>) -> Self {
+        RcSlice {
+            data: self.data.clone(),
+            offset: self.offset + range.start as u32,
+            len: (range.end - range.start) as u32,
         }
     }
 }

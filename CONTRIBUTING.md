@@ -40,7 +40,7 @@ the syntex source directories and replace them with the ones from upstream.
 syntex$ git checkout origin/rust
 syntex$ rm -r syntex_syntax/src syntex_pos/src syntex_errors/src
 syntex$ cp -r ../rust/src/libsyntax syntex_syntax/src
-syntex$ cp -r ../rust/src/libsyntax_pos syntex_pos/src
+syntex$ cp -r ../rust/src/libsyntex_pos syntex_pos/src
 syntex$ cp -r ../rust/src/librustc_errors syntex_errors/src
 syntex$ git add .
 syntex$ git commit -m "Sync with $(rustc +nightly --version)"

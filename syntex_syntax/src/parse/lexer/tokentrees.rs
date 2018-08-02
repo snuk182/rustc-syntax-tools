@@ -11,15 +11,14 @@
 use print::pprust::token_to_string;
 use parse::lexer::StringReader;
 use parse::{token, PResult};
-use syntax_pos::Span;
 use tokenstream::{Delimited, TokenStream, TokenTree};
 
 impl<'a> StringReader<'a> {
     // Parse a stream of tokens into a list of `TokenTree`s, up to an `Eof`.
-    pub fn parse_all_token_trees(&mut self) -> PResult<'a, TokenStream> {
+    crate fn parse_all_token_trees(&mut self) -> PResult<'a, TokenStream> {
         let mut tts = Vec::new();
         while self.token != token::Eof {
-            tts.push(self.parse_token_tree()?.into());
+            tts.push(self.parse_token_tree()?);
         }
         Ok(TokenStream::concat(tts))
     }
@@ -32,7 +31,7 @@ impl<'a> StringReader<'a> {
                 return TokenStream::concat(tts);
             }
             match self.parse_token_tree() {
-                Ok(tt) => tts.push(tt.into()),
+                Ok(tree) => tts.push(tree),
                 Err(mut e) => {
                     e.emit();
                     return TokenStream::concat(tts);
@@ -41,7 +40,7 @@ impl<'a> StringReader<'a> {
         }
     }
 
-    fn parse_token_tree(&mut self) -> PResult<'a, TokenTree> {
+    fn parse_token_tree(&mut self) -> PResult<'a, TokenStream> {
         match self.token {
             token::Eof => {
                 let msg = "this file contains an un-closed delimiter";
@@ -65,7 +64,7 @@ impl<'a> StringReader<'a> {
                 let tts = self.parse_token_trees_until_close_delim();
 
                 // Expand to cover the entire delimited token tree
-                let span = Span { hi: self.span.hi, ..pre_span };
+                let span = pre_span.with_hi(self.span.hi());
 
                 match self.token {
                     // Correct delimiter.
@@ -110,9 +109,9 @@ impl<'a> StringReader<'a> {
                 }
 
                 Ok(TokenTree::Delimited(span, Delimited {
-                    delim: delim,
+                    delim,
                     tts: tts.into(),
-                }))
+                }).into())
             },
             token::CloseDelim(_) => {
                 // An unexpected closing delimiter (i.e., there is no
@@ -124,8 +123,13 @@ impl<'a> StringReader<'a> {
             },
             _ => {
                 let tt = TokenTree::Token(self.span, self.token.clone());
+                // Note that testing for joint-ness here is done via the raw
+                // source span as the joint-ness is a property of the raw source
+                // rather than wanting to take `override_span` into account.
+                let raw = self.span_src_raw;
                 self.real_token();
-                Ok(tt)
+                let is_joint = raw.hi() == self.span_src_raw.lo() && token::is_op(&self.token);
+                Ok(if is_joint { tt.joint() } else { tt.into() })
             }
         }
     }

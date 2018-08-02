@@ -41,13 +41,12 @@ use std::iter::FromIterator;
 use std::ops::Deref;
 use std::{mem, ptr, slice, vec};
 
-use rustc_data_structures::stable_hasher::{StableHasher, StableHasherResult,
+use serialize::{Encodable, Decodable, Encoder, Decoder};
+
+use syntex_data_structures::stable_hasher::{StableHasher, StableHasherResult,
                                            HashStable};
-
-use serde::{Serialize, Serializer, Deserialize, Deserializer};
-
 /// An owned smart pointer.
-#[derive(Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Hash, PartialEq, Eq)]
 pub struct P<T: ?Sized> {
     ptr: Box<T>
 }
@@ -69,7 +68,7 @@ impl<T: 'static> P<T> {
         f(*self.ptr)
     }
     /// Equivalent to and_then(|x| x)
-    pub fn unwrap(self) -> T {
+    pub fn into_inner(self) -> T {
         *self.ptr
     }
 
@@ -128,23 +127,15 @@ impl<T> fmt::Pointer for P<T> {
     }
 }
 
-impl<'de, T> Deserialize<'de> for P<T>
-    where T: Deserialize<'de> + 'static
-{
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: Deserializer<'de>
-    {
-        T::deserialize(deserializer).map(P)
+impl<T: 'static + Decodable> Decodable for P<T> {
+    fn decode<D: Decoder>(d: &mut D) -> Result<P<T>, D::Error> {
+        Decodable::decode(d).map(P)
     }
 }
 
-impl<T> Serialize for P<T>
-    where T: Serialize
-{
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: Serializer
-    {
-        (**self).serialize(serializer)
+impl<T: Encodable> Encodable for P<T> {
+    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+        (**self).encode(s)
     }
 }
 
@@ -212,23 +203,15 @@ impl<'a, T> IntoIterator for &'a P<[T]> {
     }
 }
 
-impl<T> Serialize for P<[T]>
-    where T: Serialize
-{
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: Serializer
-    {
-        (**self).serialize(serializer)
+impl<T: Encodable> Encodable for P<[T]> {
+    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+        Encodable::encode(&**self, s)
     }
 }
 
-impl<'de, T> Deserialize<'de> for P<[T]>
-    where T: Deserialize<'de>
-{
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: Deserializer<'de>
-    {
-        Deserialize::deserialize(deserializer).map(P::from_vec)
+impl<T: Decodable> Decodable for P<[T]> {
+    fn decode<D: Decoder>(d: &mut D) -> Result<P<[T]>, D::Error> {
+        Ok(P::from_vec(Decodable::decode(d)?))
     }
 }
 

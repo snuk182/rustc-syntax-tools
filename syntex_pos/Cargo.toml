@@ -1,7 +1,7 @@
 [package]
 name = "syntex_pos"
-version = "0.59.1" # remember to update html_root_url
-authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>", "David Tolnay <dtolnay@gmail.com>"]
+version = "0.60.0" # remember to update html_root_url
+authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>", "David Tolnay <dtolnay@gmail.com>, Serhii Plyhun <snuk188@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "Backport of libsyntax_pos"
 repository = "https://github.com/serde-rs/syntex"
@@ -10,5 +10,9 @@ readme = "README.md"
 include = ["Cargo.toml", "src/**/*.rs", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
 
 [dependencies]
-serde = "1.0"
-serde_derive = "1.0"
+syntex_data_structures = { path = "../syntex_data_structures" }
+syntex_arena = { path = "../syntex_arena" }
+scoped-tls = { version = "0.1.1", features = ["nightly"] }
+rustc-serialize = "0.3"
+unicode-width = "0.1.4"
+cfg-if = "0.1.2"

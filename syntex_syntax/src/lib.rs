@@ -16,27 +16,42 @@
 
 #![doc(html_logo_url = "https://www.rust-lang.org/logos/rust-logo-128x128-blk-v2.png",
        html_favicon_url = "https://doc.rust-lang.org/favicon.ico",
-       html_root_url = "https://docs.rs/syntex_syntax/0.59.1",
+       html_root_url = "https://doc.rust-lang.org/nightly/",
        test(attr(deny(warnings))))]
-#![deny(warnings)]
 
-#[macro_use] extern crate log;
+#![feature(const_atomic_usize_new)]
+#![feature(crate_visibility_modifier)]
+#![feature(macro_at_most_once_rep)]
+#![feature(syntex_attrs)]
+#![feature(syntex_diagnostic_macros)]
+#![feature(slice_sort_by_cached_key)]
+#![feature(str_escape)]
+#![feature(unicode_internals)]
+
+#![recursion_limit="256"]
+
 #[macro_use] extern crate bitflags;
+extern crate core;
+#[macro_use] extern crate log;
 pub extern crate syntex_errors as errors;
-extern crate syntex_pos as syntax_pos;
-mod rustc_data_structures;
-
-extern crate extprim;
-extern crate serde;
-#[macro_use] extern crate serde_derive;
-extern crate serde_json;
+extern crate syntex_pos;
+extern crate syntex_data_structures;
+extern crate syntex_target;
+#[macro_use] extern crate scoped_tls;
 extern crate unicode_xid;
+
+extern crate rustc_serialize as serialize; 
+extern crate rustc_serialize; // used by deriving
+
+use syntex_data_structures::sync::Lock;
+use syntex_data_structures::bitvec::BitVector;
+use ast::AttrId;
 
 // A variant of 'try!' that panics on an Err. This is used as a crutch on the
 // way towards a non-panic!-prone parser. It should be used for fatal parsing
 // errors; eventually we plan to convert all code using panictry to just use
 // normal try.
-// Exported for syntax_ext, not meant for general use.
+// Exported for syntex_ext, not meant for general use.
 #[macro_export]
 macro_rules! panictry {
     ($e:expr) => ({
@@ -46,7 +61,7 @@ macro_rules! panictry {
             Ok(e) => e,
             Err(mut e) => {
                 e.emit();
-                panic!(FatalError);
+                FatalError.raise()
             }
         }
     })
@@ -61,6 +76,35 @@ macro_rules! unwrap_or {
         }
     }
 }
+
+pub struct Globals {
+    used_attrs: Lock<BitVector<AttrId>>,
+    known_attrs: Lock<BitVector<AttrId>>,
+    syntex_pos_globals: syntex_pos::Globals,
+}
+
+impl Globals {
+    fn new() -> Globals {
+        Globals {
+            // We have no idea how many attributes their will be, so just
+            // initiate the vectors with 0 bits. We'll grow them as necessary.
+            used_attrs: Lock::new(BitVector::new()),
+            known_attrs: Lock::new(BitVector::new()),
+            syntex_pos_globals: syntex_pos::Globals::new(),
+        }
+    }
+}
+
+pub fn with_globals<F, R>(f: F) -> R
+    where F: FnOnce() -> R
+{
+    let globals = Globals::new();
+    GLOBALS.set(&globals, || {
+        syntex_pos::GLOBALS.set(&globals.syntex_pos_globals, f)
+    })
+}
+
+scoped_thread_local!(pub static GLOBALS: Globals);
 
 #[macro_use]
 pub mod diagnostics {
@@ -98,7 +142,6 @@ pub mod syntax {
     pub use ast;
 }
 
-pub mod abi;
 pub mod ast;
 pub mod attr;
 pub mod codemap;
@@ -112,7 +155,8 @@ pub mod ptr;
 pub mod show_span;
 pub mod std_inject;
 pub mod str;
-pub use syntax_pos::symbol;
+pub use syntex_pos::edition;
+pub use syntex_pos::symbol;
 pub mod test;
 pub mod tokenstream;
 pub mod visit;
@@ -123,7 +167,7 @@ pub mod print {
 }
 
 pub mod ext {
-    pub use syntax_pos::hygiene;
+    pub use syntex_pos::hygiene;
     pub mod base;
     pub mod build;
     pub mod derive;
@@ -139,6 +183,8 @@ pub mod ext {
         pub mod quoted;
     }
 }
+
+pub mod early_buffered_lints;
 
 #[cfg(test)]
 mod test_snippet;

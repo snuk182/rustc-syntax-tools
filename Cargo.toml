@@ -3,4 +3,8 @@ members = [
     "syntex_pos",
     "syntex_errors",
     "syntex_syntax",
+    "syntex_arena",
+    "syntex_data_structures",
+    "syntex_cratesio_shim",
+    "syntex_target",
 ]
