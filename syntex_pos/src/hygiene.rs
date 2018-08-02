@@ -16,7 +16,7 @@
 //! DOI=10.1017/S0956796812000093 <https://doi.org/10.1017/S0956796812000093>
 
 use GLOBALS;
-use Span;
+use {Globals, Span};
 use edition::Edition;
 use symbol::Symbol;
 
@@ -225,7 +225,9 @@ impl HygieneData {
     }
 
     fn with<T, F: FnOnce(&mut HygieneData) -> T>(f: F) -> T {
-        GLOBALS.with(|globals| f(&mut *globals.hygiene_data.borrow_mut()))
+        GLOBALS.set(&Globals::new(), || {
+            GLOBALS.with(|globals| f(&mut *globals.hygiene_data.borrow_mut()))
+        })
     }
 }
 
