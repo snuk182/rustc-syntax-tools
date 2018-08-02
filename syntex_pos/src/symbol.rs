@@ -14,7 +14,7 @@
 
 use edition::Edition;
 use hygiene::SyntaxContext;
-use {Span, Globals, DUMMY_SP, GLOBALS};
+use {Span, DUMMY_SP, GLOBALS};
 
 use syntex_data_structures::fx::FxHashMap;
 use arena::DroplessArena;
@@ -481,9 +481,7 @@ impl Ident {
 // If an interner exists, return it. Otherwise, prepare a fresh one.
 #[inline]
 fn with_interner<T, F: FnOnce(&mut Interner) -> T>(f: F) -> T {
-    GLOBALS.set(&Globals::new(), || {
-        GLOBALS.with(|globals| f(&mut *globals.symbol_interner.lock()))
-    })
+    GLOBALS.with(|globals| f(&mut *globals.symbol_interner.lock()))
 }
 
 /// Represents a string stored in the interner. Because the interner outlives any thread
