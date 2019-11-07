@@ -13,6 +13,7 @@ doctest = false
 ena = "0.13.1"
 indexmap = "1"
 log = "0.4"
+libc = "0.2.65"
 jobserver_crate = { version = "0.1.13", package = "jobserver" }
 lazy_static = "1"
 rustc_serialize = { path = "../libserialize", package = "serialize" }
