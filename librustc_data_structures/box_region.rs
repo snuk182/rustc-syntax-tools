@@ -60,7 +60,7 @@ impl<I, A, R> PinnedGenerator<I, A, R> {
             i.set(Action::Complete)
         });
 
-        let result = Pin::new(&mut self.generator).resume();
+        let result = Pin::new(&mut self.generator).resume(());
         if let GeneratorState::Complete(r) = result {
             r
         } else {
